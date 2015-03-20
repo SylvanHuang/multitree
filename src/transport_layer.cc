@@ -29,12 +29,12 @@ TransportLayer::TransportLayer(int id, int port,
   // TODO(haoyan): make this a constant ...
   time_to_attempt_connect_ = uptime();
 
-  sockets_ = std::list<SprinklerSocket>();
+  sockets_ = std::list<TLSocket>();
   nsockets_ = 0;
 
   addr_list_ = std::unordered_map<std::string, SocketAddr>();
 
-  VLOG(kLogLevel) << "Created Sprinkler node with id " << id_;
+  VLOG(kLogLevel) << "Created node with id " << id_;
 }
 
 TransportLayer::~TransportLayer() {
@@ -62,7 +62,7 @@ SocketIter TransportLayer::add_socket(int skt,
         std::function<void(void *)>, void *)> deliver,
     const std::string &descr, std::string host, int port) {
   VLOG(kLogLevel) << "add_socket";
-  SprinklerSocket ss(skt, input, output, deliver, descr, host, port);
+  TLSocket ss(skt, input, output, deliver, descr, host, port);
   ss.init();
 
   sockets_.push_back(ss);
@@ -559,7 +559,7 @@ int TransportLayer::do_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
 void TransportLayer::prepare_poll(struct pollfd *fds) {
   int i;
   short int events;
-  std::list<SprinklerSocket>::iterator sit;
+  std::list<TLSocket>::iterator sit;
   for (sit = sockets_.begin(), i = 0;
        sit != sockets_.end();
        ++sit, i++) {
@@ -622,7 +622,7 @@ int TransportLayer::tl_poll(int64_t start,
 bool TransportLayer::handle_events(struct pollfd *fds, int n) {
   int i;
   bool closed_sockets = false;
-  std::list<SprinklerSocket>::iterator sit;
+  std::list<TLSocket>::iterator sit;
 
   for (sit = sockets_.begin(), i = 0;
        sit != sockets_.end();
@@ -659,7 +659,7 @@ bool TransportLayer::handle_events(struct pollfd *fds, int n) {
 }
 
 void TransportLayer::remove_closed_sockets() {
-  std::list<SprinklerSocket>::iterator sit = sockets_.begin();
+  std::list<TLSocket>::iterator sit = sockets_.begin();
   while (sit != sockets_.end()) {
     if (sit->skt == -1) {
       VLOG(kLogLevel) << "Remove closed socket with endpiont (" << sit->host
@@ -730,7 +730,7 @@ int TransportLayer::wait(int timeout) {
   return 1;
 }
 
-void SprinklerSocket::init() {
+void TLSocket::init() {
   socklen_t optlen = sizeof(sndbuf_size);
   if (getsockopt(skt, SOL_SOCKET, SO_SNDBUF, &sndbuf_size, &optlen) < 0) {
     LOG(ERROR) << "add_socket: getsockopt SO_SNDBUF";

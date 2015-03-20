@@ -21,8 +21,8 @@
 
 // TODO(haoyan): add EPOLL support if necessary.
 
-struct SprinklerSocket;
-typedef std::list<SprinklerSocket>::iterator SocketIter;
+struct TLSocket;
+typedef std::list<TLSocket>::iterator SocketIter;
 
 // Data chunk to be sent out from a socket.
 struct Chunk {
@@ -40,7 +40,7 @@ struct Chunk {
 };
 
 // One of these is allocated for each socket.
-struct SprinklerSocket {
+struct TLSocket {
   int skt;
   std::function<int(SocketIter)> input;
   std::function<int(SocketIter)> output;
@@ -69,7 +69,7 @@ struct SprinklerSocket {
       std::function<void(void *)>, void *)> deliver;
 
   // Constructor.
-  SprinklerSocket(int skt,
+  TLSocket(int skt,
       std::function<int(SocketIter)> input,
       std::function<int(SocketIter)> output,
       std::function<void(const uint8_t *, int,
@@ -101,10 +101,10 @@ struct SocketAddr {
 };
 
 // Connection manager that manages all the socket connections.
-// One per Sprinkler node.
+// One per node.
 class TransportLayer {
  public:
-  // Constructor that specifies the id of this Sprinkler node, and upcalls
+  // Constructor that specifies the id of this node, and upcalls
   // to the protocol layer.
   TransportLayer(int id, int port,
       std::function<void(const std::string &, int)> outgoing,
@@ -119,7 +119,7 @@ class TransportLayer {
   // Listen on a TCP port to wait for connections.
   void tl_listen();
 
-  // Register a peer Sprinkler node available to connect.
+  // Register a peer node available to connect.
   void register_peer(const std::string &host, int port);
 
   // Returns true if there is a socket connection to the given endpoint and
@@ -162,7 +162,7 @@ class TransportLayer {
   static std::string get_endpoint(std::string host, int port);
 
   // Add a new socket to the list of sockets that we know about.
-  // Returns the address of that SprinklerSocket object so that upper
+  // Returns the address of that TLSocket object so that upper
   // layers could reference.
   SocketIter add_socket(int skt,
       std::function<int(SocketIter)> input,
@@ -200,12 +200,14 @@ class TransportLayer {
   // Get inet address from (host, port).
   bool get_inet_address(struct sockaddr_in *sin, const char *addr, int port);
 
-  // Connect to a remote Sprinkler node.  The node will identify itself so no
+  // Connect to a remote node.  The node will identify itself so no
   // need to specify which node it is.
   void try_connect(SocketAddr *socket_addr);
 
   // Try to make connection to all available peers.
   void try_connect_all();
+
+  // TODO: discoonect from a remote node.
 
   // Go through the registered sockets and see which need attention.
   void prepare_poll(struct pollfd *fds);
@@ -232,7 +234,7 @@ class TransportLayer {
   // Listening port.
   int port_;
   // Linked list of sockets.
-  std::list<SprinklerSocket> sockets_;
+  std::list<TLSocket> sockets_;
   // #sockets in the list.
   int nsockets_;
   // Addresses of peers.
